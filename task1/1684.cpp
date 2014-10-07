@@ -1,67 +1,56 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <iostream>
-#include <algorithm>
 #include <string>
 #include <vector>
+#include <algorithm>
 using namespace std;
 
-const long maxlen = 150005;
-
-string first, second, s;
-long f[maxlen];
-string answer[maxlen];
-long cht;
-
-void prefix_function()
+void p_func(string s, vector<int> &p)
 {
-	long k = 0;
-	f[1] = 0;
-	for (long it = 2; it <= s.length() - 1; it++)
+	int n = s.length();
+	p.assign(n, 0);
+	for (int i = 1; i < n; ++i)
 	{
-		while ((k>0) && (s[k + 1] != s[it]))
-			k = f[k];
-		if (s[k + 1] == s[it])
-			k++;
-		f[it] = k;
+		int j = p[i - 1];
+		while (j > 0 && s[i] != s[j])
+			j = p[j - 1];
+		if (s[i] == s[j])
+			++j;
+		p[i] = j;
 	}
 }
 
-int main()
+void main() 
 {
 #ifndef ONLINE_JUDGE
 	freopen("input.txt", "r", stdin);
 	freopen("output.txt", "w", stdout);
 #endif
-	long q;
-	cin >> first >> second;
-	s = '$' + first + '$' + second;
-	prefix_function();
-
-	bool fail = false;
-	for (q = first.length() + 2; q <= s.length() - 1; q++)
-	if (f[q] == 0)
+	
+	string word, jack, concat;
+	cin >> word >> jack;
+	concat = word + '#' + jack;
+	
+	vector<int> p;
+	p_func(concat, p);
+	for (int i = word.length() + 1; i < concat.length(); ++i)
+	if (!p[i])
 	{
-		fail = true;
-		break;
+		cout << "Yes" << endl;
+		return;
 	}
-	if (fail)
+	
+	vector<string> ans;
+	int cur_pos = concat.length() - 1,
+		count = 0;
+	while (cur_pos > word.length())
 	{
-		printf("Yes");
-		return 0;
+		ans.push_back(concat.substr(cur_pos - p[cur_pos] + 1, p[cur_pos]));
+		cur_pos -= p[cur_pos];
+		++count;
 	}
-	long now = s.length() - 1;
-	cht = 0;
-	while (now >= first.length() + 2)
-	{
-		cht++;
-		answer[cht] = s.substr(now - f[now] + 1, f[now]);
-		now -= f[now];
-	}
-
-	printf("No\n");
-	for (q = cht; q >= 1; q--)
-	{
-		cout << answer[q] << " ";
-	}
+	cout << "No" << endl;
+	for (int i = ans.size() - 1; i >= 0; --i)
+		cout << ans[i] << " ";
 }
