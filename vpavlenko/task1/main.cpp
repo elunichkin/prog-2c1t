@@ -1,3 +1,3 @@
-#include "SuffixTree.h"
-
-void main() {}
+void main() {
+    
+}
