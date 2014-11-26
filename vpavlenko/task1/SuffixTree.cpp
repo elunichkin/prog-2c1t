@@ -1,7 +1,7 @@
 #include "SuffixTree.h"
 
 SuffixTree::Node::Node(int _start_index = 0, int _end_index = 0, int _parent = -1)
-: start_index(start_index), end_index(end_index), parent(parent), link(-1)
+: start_index(_start_index), end_index(_end_index), parent(_parent), link(-1)
 {}
 
 int SuffixTree::Node::NodeLength() {
@@ -17,6 +17,10 @@ int &SuffixTree::Node::GetNext(char symbol) {
 
 SuffixTree::State::State(int _vertex, int _position)
 : vertex(_vertex), position(_position)
+{}
+
+SuffixTree::State::State()
+: State(0, 0)
 {}
 
 SuffixTree::State SuffixTree::MoveTo(State state, int _start_index, int _end_index) {
@@ -58,7 +62,7 @@ int SuffixTree::Split(SuffixTree::State state) {
 }
 
 int SuffixTree::GetLink(int vertex) {
-    if (tree[vertex].link == -1) {
+    if (tree[vertex].link != -1) {
         return tree[vertex].link;
     }
     if (tree[vertex].parent == -1) {
@@ -90,7 +94,6 @@ void SuffixTree::ExtendTree(int position) {
 
 void SuffixTree::BuildTree() {
     tree.resize(4 * length);
-    pointer = State(0, 0);
     treeSize = 1;
     for (int i = 0; i < length; ++i)
         ExtendTree(i);
@@ -98,6 +101,12 @@ void SuffixTree::BuildTree() {
 
 std::vector<SuffixTree::Node> SuffixTree::GetTree() const {
     return tree;
+}
+
+SuffixTree::SuffixTree(std::string text)
+: string(text), length(text.length())
+{
+    BuildTree();
 }
 
 template<class Visitor>
@@ -142,4 +151,10 @@ void SuffixTreeVisitor::AddOccurence(int occurence) {
 
 std::vector<int> SuffixTreeVisitor::GetOccurences() {
     return occurences;
+}
+
+std::vector<int> findAllOccurences(const SuffixTree& suffixTree, std::string pattern) {
+    SuffixTreeVisitor visitor(pattern);
+    suffixTree.FindOccurences(&visitor);
+    return visitor.GetOccurences();
 }

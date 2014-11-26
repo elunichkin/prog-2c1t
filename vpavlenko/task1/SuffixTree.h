@@ -26,6 +26,7 @@ class SuffixTree {
         int vertex, position;
 
         State(int _vertex, int _position);
+        State();
     };
 
     State pointer;
@@ -38,6 +39,8 @@ class SuffixTree {
     std::vector<Node> GetTree() const;
 
 public:
+    SuffixTree(std::string text);
+
     template<class Visitor>
     void FindOccurences(Visitor *visitor) const;
 };
@@ -52,10 +55,6 @@ struct SuffixTreeVisitor {
     std::vector<int> GetOccurences();
 };
 
-std::vector<int> findAllOccurences(const SuffixTree& suffixTree, std::string pattern) {
-    SuffixTreeVisitor visitor(pattern);
-    suffixTree.FindOccurences(&visitor);
-    return visitor.GetOccurences();
-}
+std::vector<int> findAllOccurences(const SuffixTree& suffixTree, std::string pattern);
 
 #endif
