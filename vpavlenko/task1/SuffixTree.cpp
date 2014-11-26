@@ -96,10 +96,40 @@ void SuffixTree::BuildTree() {
         ExtendTree(i);
 }
 
-template<class Visitor>
-void SuffixTree::DFS(Visitor *visitor) const {
-    std::string pattern = visitor->pattern;
+std::vector<SuffixTree::Node> SuffixTree::GetTree() const {
+    return tree;
+}
 
+template<class Visitor>
+void SuffixTree::FindOccurences(Visitor *visitor) const {
+    std::vector<Node> tree = GetTree();
+    std::string pattern = visitor->pattern;
+    int startNodeIndex = 0;
+    for (int i = 0; i < pattern.length(); ++i) {
+        if (tree[startNodeIndex].out_edges[pattern[i]] == -1) {
+            return;
+        }
+        startNodeIndex = tree[startNodeIndex].out_edges[pattern[i]];
+    }
+    std::map<int, int> depth;
+    depth[startNodeIndex] = pattern.length();
+    std::stack<int> DFSStack;
+    DFSStack.push(startNodeIndex);
+    while (!DFSStack.empty()) {
+        int currentNodeIndex = DFSStack.top();
+        DFSStack.pop();
+        int currentDepth = depth[currentNodeIndex];
+        bool isNotLeaf = false;
+        for (auto it = tree[currentNodeIndex].out_edges.begin(); it != tree[currentNodeIndex].out_edges.end(); ++it) {
+            if (it->second != -1) {
+                DFSStack.push(it->second);
+                depth[it->second] = currentDepth + 1;
+                isNotLeaf = true;
+            }
+        }
+        if (!isNotLeaf)
+            visitor->AddOccurence(treeSize - currentDepth);
+    }
 }
 
 SuffixTreeVisitor::SuffixTreeVisitor(std::string _pattern)

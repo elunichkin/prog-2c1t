@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <stack>
 
 class SuffixTree {
     std::string string;
@@ -34,10 +35,11 @@ class SuffixTree {
     int GetLink(int vertex);
     void ExtendTree(int position);
     void BuildTree();
+    std::vector<Node> GetTree() const;
 
 public:
     template<class Visitor>
-    void DFS(Visitor *visitor) const;
+    void FindOccurences(Visitor *visitor) const;
 };
 
 struct SuffixTreeVisitor {
@@ -52,7 +54,7 @@ struct SuffixTreeVisitor {
 
 std::vector<int> findAllOccurences(const SuffixTree& suffixTree, std::string pattern) {
     SuffixTreeVisitor visitor(pattern);
-    suffixTree.DFS(&visitor);
+    suffixTree.FindOccurences(&visitor);
     return visitor.GetOccurences();
 }
 
