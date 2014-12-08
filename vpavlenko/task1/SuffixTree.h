@@ -38,19 +38,19 @@ public:
     SuffixTree(std::string text);
 
     Node getRoot() const;
+    int getLength() const;
 
     struct Node {
         SuffixTree &suffixTree;
         int node;
 
         Node(SuffixTree &_suffixTree, int _node);
-        Node(Node &other);
 
         std::vector<Edge> getOutgoingEdges();
         Edge getBySymbol(char);
         bool hasEdge(char);
 
-        void operator= (Node &other);
+        void operator= (const Node &other);
     };
 
     struct Edge {
