@@ -1,60 +1,70 @@
-#ifndef _SUFFIXTREE_H
-#define _SUFFIXTREE_H
+#ifndef SUFFIXTREE
+#define SUFFIXTREE
 
 #include <string>
 #include <vector>
-#include <map>
-#include <stack>
+#include <algorithm>
 
 class SuffixTree {
-    std::string string;
-    int length;
+    const static int alphabetSize = 53;
+    const static char terminationSymbol = '$';
 
-    struct Node {
-        int start_index, end_index, parent, link;
-        std::map<char, int> out_edges;
+    static int toCode(char);
 
-        Node(int _start_index, int _end_index, int _parent);
-        int NodeLength();
-        int &GetNext(char symbol);
-	};
+    struct Node;
+    struct Edge;
 
-    std::vector<Node> tree;
-    int treeSize;
+    struct InlineNode {
+        InlineNode(int _parent);
 
-    struct State {
-        int vertex, position;
+        std::vector<int> next, start, end;
+        int parent, length;
 
-        State(int _vertex, int _position);
-        State();
+        void setForSymbol(char, int, int, int);
+        int lengthForSymbol(int);
     };
 
-    State pointer;
+    std::string s;
+    std::vector<int> links;
+    std::vector<InlineNode> tree;
 
-    State MoveTo(State state, int _start_index, int _end_index);
-    int Split(State state);
-    int GetLink(int vertex);
-    void ExtendTree(int position);
-    void BuildTree();
-    std::vector<Node> GetTree() const;
+    void addNode(int);
+    void addLeaf(int, int, int);
+    void next(int&, int&, int&, int, int);
+    bool trySymbol(int, int, int, int);
+    int split(int, int, int);
 
 public:
     SuffixTree(std::string text);
 
-    template<class Visitor>
-    void FindOccurences(Visitor *visitor) const;
+    Node getRoot() const;
+
+    struct Node {
+        SuffixTree &suffixTree;
+        int node;
+
+        Node(SuffixTree &_suffixTree, int _node);
+        Node(Node &other);
+
+        std::vector<Edge> getOutgoingEdges();
+        Edge getBySymbol(char);
+        bool hasEdge(char);
+
+        void operator= (Node &other);
+    };
+
+    struct Edge {
+        SuffixTree &suffixTree;
+        int node, symbol;
+
+        Edge(SuffixTree &_suffixTree, int _node, int _symbol);
+
+        char getCharAt(int);
+        Node getNode();
+        int getLen();
+    };
 };
 
-struct SuffixTreeVisitor {
-    std::string pattern;
-    std::vector<int> occurences;
-
-    SuffixTreeVisitor(std::string _pattern);
-
-    void AddOccurence(int occurence);
-    std::vector<int> GetOccurences();
-};
-
-std::vector<int> findAllOccurences(const SuffixTree& suffixTree, std::string pattern);
+std::vector<int> findAllOccurences(const SuffixTree&, std::string);
 
 #endif

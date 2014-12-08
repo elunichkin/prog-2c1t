@@ -3,7 +3,9 @@
 using namespace std;
 
 void main() {
-    vector<int> occurences = findAllOccurences(SuffixTree("ababa"), "ab");
+    SuffixTree st("abacaba");
+    vector<int> occurences = findAllOccurences(st, "ab");
+    cout << occurences.size() << endl;
     for (int i = 0; i < occurences.size(); ++i)
-        cout << occurences[i] << endl;
+        cout << occurences[i] << " ";
 }

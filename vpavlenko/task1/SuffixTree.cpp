@@ -1,160 +1,183 @@
 #include "SuffixTree.h"
 
-SuffixTree::Node::Node(int _start_index = 0, int _end_index = 0, int _parent = -1)
-: start_index(_start_index), end_index(_end_index), parent(_parent), link(-1)
+int SuffixTree::toCode(char symbol) {
+    if (symbol >= 'a' && symbol <= 'z')
+        return symbol - 'a';
+    if (symbol >= 'A' && symbol <= 'Z')
+        return SuffixTree::alphabetSize / 2 + symbol - 'A';
+    if (symbol == SuffixTree::terminationSymbol)
+        return SuffixTree::alphabetSize - 1;
+}
+
+SuffixTree::InlineNode::InlineNode(int _parent = 0)
+: parent(_parent), length(0), next(SuffixTree::alphabetSize, -1), start(SuffixTree::alphabetSize), end(SuffixTree::alphabetSize)
 {}
 
-int SuffixTree::Node::NodeLength() {
-    return end_index - start_index;
+void SuffixTree::InlineNode::setForSymbol(char symbol, int newNext, int newStart, int newEnd) {
+    int code = SuffixTree::toCode(symbol);
+    next[code] = newNext;
+    start[code] = newStart;
+    end[code] = newEnd;
 }
 
-int &SuffixTree::Node::GetNext(char symbol) {
-    if (!out_edges.count(symbol)) {
-        out_edges[symbol] = -1;
+int SuffixTree::InlineNode::lengthForSymbol(int code) {
+    return end[code] - start[code];
+}
+
+void SuffixTree::addNode(int _parent) {
+    tree.push_back(InlineNode());
+    links.push_back(-1);
+}
+
+void SuffixTree::addLeaf(int node, int symbol, int start) {
+    addNode(node);
+    tree[node].setForSymbol(symbol, tree.size(), start, s.length());
+    tree.back().length = s.length() - start - 1 + tree[node].length;
+}
+
+void SuffixTree::next(int& node, int& length, int& code, int start, int end) {
+    length = end - start - tree[node].length;
+    while (tree[node].next[code] > -1 && length >= tree[node].lengthForSymbol(code)) {
+        int newLength = tree[node].lengthForSymbol(code);
+        node = tree[node].next[code];
+        length -= newLength;
+        code = SuffixTree::toCode(s[tree[node].length + 1]);
     }
-    return out_edges[symbol];
 }
 
-SuffixTree::State::State(int _vertex, int _position)
-: vertex(_vertex), position(_position)
+bool SuffixTree::trySymbol(int node, int length, int start, int code) {
+    if (!length)
+        return tree[node].next[code] != -1;
+    return SuffixTree::toCode(s[tree[node].start[start] + length]) == code;
+}
+int SuffixTree::split(int node, int length, int code) {
+    if (!length)
+        return node;
+    if (length == tree[node].lengthForSymbol(code))
+        return tree[node].next[code];
+    addNode(node);
+    char symbol = s[tree[node].start[code] + length];
+    tree.back().setForSymbol(symbol, tree[node].next[code], tree[node].end[code], tree[node].start[code] + length);
+    tree[node].end[code] = tree[node].start[code] + length;
+    tree[node].next[code] = tree.size() - 1;
+    tree[tree.back().next[SuffixTree::toCode(symbol)]].parent = tree.size() - 1;
+    tree.back().length = tree[node].length + 1;
+    return tree.size() - 1;
+}
+
+SuffixTree::SuffixTree(std::string text) {
+    s = text + SuffixTree::terminationSymbol;
+    int start = 0,
+        end = 0;
+    tree.push_back(InlineNode());
+    links.push_back(0);
+    int node = 0,
+        length = 0,
+        startSymbol = 0,
+        alone = -1;
+    while (std::max(start, end) < s.length()) {
+        int code = SuffixTree::toCode(s[end]);
+        while (start <= end && !trySymbol(node, length, startSymbol, code)) {
+            int mid = split(node, length, code);
+            if (alone > -1) {
+                links[alone] = mid;
+                alone = -1;
+            }
+            if (links[mid] == -1)
+                alone = mid;
+            addLeaf(mid, code, end);
+            ++start;
+            node = links[node];
+            code = SuffixTree::toCode(s[start + tree[node].length]);
+            if (start <= end)
+                next(node, length, code, start, end);
+        }
+        if (alone > -1) {
+            links[alone] = node;
+            alone = -1;
+        }
+        ++end;
+        if (start != end)
+            next(node, length, code, start, end);
+    }
+}
+
+SuffixTree::Node SuffixTree::getRoot() const {
+    return Node(const_cast<SuffixTree&>(*this), 0);
+}
+
+SuffixTree::Node::Node(SuffixTree &_suffixTree, int _node)
+: suffixTree(_suffixTree), node(_node)
 {}
 
-SuffixTree::State::State()
-: State(0, 0)
+SuffixTree::Node::Node(Node &other)
+: suffixTree(other.suffixTree), node(other.node)
 {}
 
-SuffixTree::State SuffixTree::MoveTo(State state, int _start_index, int _end_index) {
-    while (_start_index < _end_index) {
-        if (state.position == tree[state.vertex].NodeLength()) {
-            state = State(tree[state.vertex].GetNext(string[_start_index]), 0);
-            if (state.vertex == -1) {
-                return state;
-            }
-        } else {
-            if (string[tree[state.vertex].start_index + state.position] != string[_start_index]) {
-                return State(-1, -1);
-            }
-            if (_end_index - _start_index < tree[state.vertex].NodeLength() - state.position) {
-                return State(state.vertex, state.position + _end_index - _start_index);
-            }
-            _start_index += tree[state.vertex].NodeLength() - state.position;
-            state.position = tree[state.vertex].NodeLength();
+void SuffixTree::Node::operator= (SuffixTree::Node & other) {
+    (*this) = Node(other);
+}
+
+std::vector<SuffixTree::Edge> SuffixTree::Node::getOutgoingEdges() {
+    std::vector<Edge> listEdges;
+    for (__int8 i = 0; i < SuffixTree::alphabetSize; ++i) {
+        if (suffixTree.tree[node].next[i] != -1) {
+            listEdges.push_back(Edge(suffixTree, node, i));
         }
     }
-    return state;
+    return listEdges;
 }
 
-int SuffixTree::Split(SuffixTree::State state) {
-    if (state.position == tree[state.vertex].NodeLength()) {
-        return state.vertex;
-    }
-    if (state.position == 0) {
-        tree[state.vertex].parent;
-    }
-    Node currentVertex = tree[state.vertex];
-    int currentIndex = treeSize++;
-    tree[currentIndex] = Node(currentVertex.start_index, currentVertex.start_index + state.position, currentVertex.parent);
-    tree[currentVertex.parent].GetNext(string[currentVertex.start_index]) = currentIndex;
-    tree[currentIndex].GetNext(string[currentVertex.start_index + state.position]) = state.vertex;
-    tree[state.vertex].parent = currentIndex;
-    tree[state.vertex].start_index += state.position;
-    return currentIndex;
+SuffixTree::Edge SuffixTree::Node::getBySymbol(char symbol) {
+    return Edge(suffixTree, node, SuffixTree::toCode(symbol));
 }
 
-int SuffixTree::GetLink(int vertex) {
-    if (tree[vertex].link != -1) {
-        return tree[vertex].link;
-    }
-    if (tree[vertex].parent == -1) {
-        return 0;
-    }
-    int resultPosition = GetLink(tree[vertex].parent);
-    tree[vertex].link = Split(MoveTo(SuffixTree::State(resultPosition, tree[resultPosition].NodeLength()), tree[vertex].start_index + (tree[vertex].parent == 0), tree[vertex].end_index));
-    return tree[vertex].link;
+bool SuffixTree::Node::hasEdge(char symbol) {
+    return suffixTree.tree[node].next[SuffixTree::toCode(symbol)] != 1;
 }
 
-void SuffixTree::ExtendTree(int position) {
-    while (true) {
-        State newPointer = MoveTo(pointer, position, position + 1);
-        if (newPointer.vertex != -1) {
-            pointer = newPointer;
-            return;
-        }
-        int middle = Split(pointer);
-        int leaf = treeSize++;
-        tree[leaf] = Node(position, length, middle);
-        tree[middle].GetNext(string[position]) = leaf;
-        pointer.vertex = GetLink(middle);
-        pointer.position = tree[pointer.vertex].NodeLength();
-        if (!middle) {
-            break;
-        }
-    }
-}
-
-void SuffixTree::BuildTree() {
-    tree.resize(4 * length);
-    treeSize = 1;
-    for (int i = 0; i < length; ++i)
-        ExtendTree(i);
-}
-
-std::vector<SuffixTree::Node> SuffixTree::GetTree() const {
-    return tree;
-}
-
-SuffixTree::SuffixTree(std::string text)
-: string(text), length(text.length())
-{
-    BuildTree();
-}
-
-template<class Visitor>
-void SuffixTree::FindOccurences(Visitor *visitor) const {
-    std::vector<Node> tree = GetTree();
-    std::string pattern = visitor->pattern;
-    int startNodeIndex = 0;
-    for (int i = 0; i < pattern.length(); ++i) {
-        if (tree[startNodeIndex].out_edges[pattern[i]] == -1) {
-            return;
-        }
-        startNodeIndex = tree[startNodeIndex].out_edges[pattern[i]];
-    }
-    std::map<int, int> depth;
-    depth[startNodeIndex] = pattern.length();
-    std::stack<int> DFSStack;
-    DFSStack.push(startNodeIndex);
-    while (!DFSStack.empty()) {
-        int currentNodeIndex = DFSStack.top();
-        DFSStack.pop();
-        int currentDepth = depth[currentNodeIndex];
-        bool isNotLeaf = false;
-        for (auto it = tree[currentNodeIndex].out_edges.begin(); it != tree[currentNodeIndex].out_edges.end(); ++it) {
-            if (it->second != -1) {
-                DFSStack.push(it->second);
-                depth[it->second] = currentDepth + 1;
-                isNotLeaf = true;
-            }
-        }
-        if (!isNotLeaf)
-            visitor->AddOccurence(treeSize - currentDepth);
-    }
-}
-
-SuffixTreeVisitor::SuffixTreeVisitor(std::string _pattern)
-: pattern(_pattern)
+SuffixTree::Edge::Edge(SuffixTree &_suffixTree, int _node, int _symbol)
+: suffixTree(_suffixTree), node(_node), symbol(_symbol)
 {}
 
-void SuffixTreeVisitor::AddOccurence(int occurence) {
-    occurences.push_back(occurence);
+char SuffixTree::Edge::getCharAt(int index) {
+    return suffixTree.s[suffixTree.tree[node].start[symbol] + index];
 }
 
-std::vector<int> SuffixTreeVisitor::GetOccurences() {
-    return occurences;
+SuffixTree::Node SuffixTree::Edge::getNode() {
+    return Node(suffixTree, suffixTree.tree[node].next[symbol]);
+}
+
+int SuffixTree::Edge::getLen() {
+    return suffixTree.tree[node].start[symbol] - suffixTree.tree[node].end[symbol];
+}
+
+void DFS(SuffixTree::Node node, int depth, std::vector<int> &occurences) {
+    std::vector<SuffixTree::Edge> edges = node.getOutgoingEdges();
+    if (edges.empty())
+        occurences.push_back(depth);
+    for (int i = 0; i < edges.size(); ++i) {
+        DFS(edges[i].getNode(), depth + edges[i].getLen(), occurences);
+    }
 }
 
 std::vector<int> findAllOccurences(const SuffixTree& suffixTree, std::string pattern) {
-    SuffixTreeVisitor visitor(pattern);
-    suffixTree.FindOccurences(&visitor);
-    return visitor.GetOccurences();
+    std::vector<int> occurences;
+    SuffixTree::Node currentNode = suffixTree.getRoot();
+    int currentLength = 0;
+    while (currentLength < pattern.size()) {
+        if (!currentNode.hasEdge(pattern[currentLength]))
+            return occurences;
+        SuffixTree::Edge currentEdge = currentNode.getBySymbol(pattern[currentLength]);
+        for (int i = 0; i < std::min(currentEdge.getLen(), (int)(pattern.length() - currentLength)); ++i) {
+            if (currentEdge.getCharAt(i) != pattern[currentLength + i])
+                return occurences;
+        }
+        currentLength += currentEdge.getLen();
+        currentNode = currentEdge.getNode();
+    }
+    DFS(currentNode, 0, occurences);
+    for (int i = 0; i < occurences.size(); ++i)
+        occurences[i] = 1 - currentLength - occurences[i];
+    return occurences;
 }
