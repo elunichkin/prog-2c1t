@@ -11,7 +11,7 @@ int F(int x, int y)
     if (f[x][y] >= 0)
         return f[x][y];
     if ((x == 1 && y <= k) || (y == 1 && x <= k))
-        return f[x][y] = 1; 
+        return f[x][y] = 0; 
 
     unordered_set<int> used;
     for (int i = 1; i < x; ++i)
