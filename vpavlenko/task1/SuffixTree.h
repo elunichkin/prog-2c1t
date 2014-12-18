@@ -11,9 +11,11 @@ class SuffixTree {
 
     static int toCode(char);
 
+public:
     struct Node;
     struct Edge;
 
+private:
     struct InlineNode {
         InlineNode(int _parent);
 

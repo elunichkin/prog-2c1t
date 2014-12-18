@@ -121,7 +121,7 @@ void SuffixTree::Node::operator= (const SuffixTree::Node & other) {
 
 std::vector<SuffixTree::Edge> SuffixTree::Node::getOutgoingEdges() {
     std::vector<Edge> listEdges;
-    for (__int8 i = 0; i < SuffixTree::alphabetSize; ++i) {
+    for (int i = 0; i < SuffixTree::alphabetSize; ++i) {
         if (suffixTree.tree[node].next[i] != -1) {
             listEdges.push_back(Edge(suffixTree, node, i));
         }
