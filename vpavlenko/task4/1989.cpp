@@ -49,9 +49,6 @@ public:
 int main() {
     ios_base::sync_with_stdio(false);
 
-    freopen("input.txt", "r", stdin);
-    freopen("output.txt", "w", stdout);
-
     string normal, reversed;
     cin >> normal;
     reversed = normal;
