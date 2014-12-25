@@ -25,7 +25,7 @@ int SuffixTree::InlineNode::lengthForSymbol(int code) {
 }
 
 void SuffixTree::addNode(int _parent) {
-    tree.push_back(InlineNode());
+    tree.push_back(InlineNode(_parent));
     links.push_back(-1);
 }
 
